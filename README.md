@@ -81,3 +81,20 @@ The core logic resides in two functions within `server.py` that require completi
 * **Content-Type (Crucial for Visual Test):** Determine the correct `Content-Type` header (e.g., `text/html`, `image/jpeg`) based on the file extension. **Hint:** Use the imported `mimetypes` library.
 * **200 OK Response:** On success, build the complete response with the status line (`HTTP/1.1 200 OK`), required headers (`Content-Type`, `Content-Length`), and the file content (body) as a single `bytes` object.
 * **404 Not Found:** If the file is not found, construct a **`404 Not Found`** response with an HTML body explaining the error.
+
+
+### 1. What is the difference between this HTTP Server and Apache?
+
+| Feature | This HTTP Server | Apache HTTP Server |
+| :--- | :--- | :--- |
+| **Abstraction** | **Low-Level** (manual socket handling, raw parsing). | **High-Level** (config-driven, abstracts networking). |
+| **Concurrency** | **Single-Threaded** (one request at a time). | **Highly Concurrent** (threads/processes handle many simultaneous requests). |
+| **Features** | Minimal (static file serving). | Comprehensive (caching, logging, modules, security, virtual hosts). |
+| **Purpose** | Learning/Demonstration. | Production-Grade, high-scale web hosting. |
+
+### 2. How can you write `http_server` to allow only certain browsers (e.g., Chrome) to download content?
+
+1.  **Parse Header:** The server must **read and parse the request headers** to extract the value of the **`User-Agent`** header.
+2.  **Enforce Policy (Teammate 2):** In the `generate_http_response` function:
+    * **Check:** Use an `if` statement to search the extracted `User-Agent` string for allowed keywords (e.g., `"Chrome"`).
+    * **Deny:** If the browser is not allowed, the server must bypass file reading and immediately send an **`HTTP/1.1 403 Forbidden`** status code in the response.
