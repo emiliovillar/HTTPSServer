@@ -1,0 +1,2 @@
+This is a plain text file for testing the HTTP server.
+It should be served with Content-Type: text/plain
