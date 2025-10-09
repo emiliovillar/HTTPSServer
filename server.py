@@ -1,6 +1,7 @@
 import socket
 import os
 import argparse
+import mimetypes
 
 HOST = "127.0.0.1" #localhost
 DEFAULT_PORT = 8080        # default port
@@ -64,6 +65,81 @@ def parse_http_request(request_data):
         print(f"[ERROR] Failed to parse HTTP request: {e}")
         return "index.html"  # Default fallback
 
+def generate_http_response(file_path):
+    """
+    Generate HTTP response for the requested file.
+    
+    Args:
+        file_path (str): Path to the requested file
+        
+    Returns:
+        bytes: Complete HTTP response (headers + body)
+    """
+    try:
+        # Check if file exists
+        if not os.path.exists(file_path):
+            print(f"[DEBUG] File not found: {file_path}")
+            return generate_404_response()
+        
+        # Read file in binary mode
+        with open(file_path, 'rb') as file:
+            file_content = file.read()
+        
+        # Determine MIME type
+        mime_type, _ = mimetypes.guess_type(file_path)
+        if mime_type is None:
+            mime_type = 'application/octet-stream'  # Default for unknown types
+        
+        print(f"[DEBUG] Serving file: {file_path} (MIME: {mime_type}, Size: {len(file_content)} bytes)")
+        
+        # Build HTTP response
+        status_line = b"HTTP/1.1 200 OK\r\n"
+        content_type_header = f"Content-Type: {mime_type}\r\n".encode()
+        content_length_header = f"Content-Length: {len(file_content)}\r\n".encode()
+        connection_header = b"Connection: close\r\n"
+        empty_line = b"\r\n"
+        
+        response = status_line + content_type_header + content_length_header + connection_header + empty_line + file_content
+        
+        return response
+        
+    except Exception as e:
+        print(f"[ERROR] Failed to serve file {file_path}: {e}")
+        return generate_404_response()
+
+def generate_404_response():
+    """
+    Generate a 404 Not Found HTTP response.
+    
+    Returns:
+        bytes: Complete HTTP 404 response
+    """
+    error_html = b"""
+<!DOCTYPE html>
+<html>
+<head>
+    <title>404 Not Found</title>
+</head>
+<body>
+    <h1>404 Not Found</h1>
+    <p>The requested file was not found on this server.</p>
+    <hr>
+    <p><em>Custom HTTP Server</em></p>
+</body>
+</html>
+"""
+    
+    status_line = b"HTTP/1.1 404 Not Found\r\n"
+    content_type_header = b"Content-Type: text/html\r\n"
+    content_length_header = f"Content-Length: {len(error_html)}\r\n".encode()
+    connection_header = b"Connection: close\r\n"
+    empty_line = b"\r\n"
+    
+    response = status_line + content_type_header + content_length_header + connection_header + empty_line + error_html
+    
+    print("[DEBUG] Generated 404 Not Found response")
+    return response
+
 def handle_connection(client_socket):
 
     print("--- Connection Accepted ---")
@@ -84,35 +160,12 @@ def handle_connection(client_socket):
     requested_file = parse_http_request(request_data)
     print(f"[DEBUG] Requested file: {requested_file}")
     
-    # 3. File Handling and HTTP responses 
-    #    
-    #    Required implementation:
-    #    - Import mimetypes library at the top of the file
-    #    - Create generate_http_response(file_path) function that:
-    #      * Checks if file exists using os.path.exists()
-    #      * If file exists: read file in binary mode, determine MIME type, 
-    #        build HTTP/1.1 200 OK response with proper headers
-    #      * If file missing: return HTTP/1.1 404 Not Found with HTML error page
-    #    - Replace the placeholder code below with: full_response = generate_http_response(requested_file)
-    #    
-    #    Headers needed for 200 OK:
-    #    - Content-Type: (use mimetypes.guess_type() based on file extension)
-    #    - Content-Length: (exact byte length of file content)
-    #    - Connection: close
-    #    
-    #    Headers needed for 404:
-    #    - Content-Type: text/html
-    #    - Content-Length: (length of error HTML)
-    #    - Connection: close
-    
-    # PLACEHOLDER: replace this with actual file serving
-    response_header = b"HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n" # Placeholder header
-    response_body = b"<html><body><h1>Placeholder Content. Teammate 2 needs to load the file!</h1><p>Requested file: " + requested_file.encode() + b"</p></body></html>" # Placeholder body
-    
-    full_response = response_header + response_body
+    # 3. File Handling and HTTP responses - COMPLETED
+    #    Generate proper HTTP response with file content or 404 error
+    full_response = generate_http_response(requested_file)
 
     #  outbound message for debugging 
-    print("\n[Outbound Message]\n" + response_header.decode('utf-8', 'ignore').split('\n')[0].strip())
+    print("\n[Outbound Message]\n" + full_response.decode('utf-8', 'ignore').split('\n')[0].strip())
 
     # 4. Send the content back to the browser
     client_socket.sendall(full_response)
